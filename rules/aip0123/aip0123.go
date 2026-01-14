@@ -20,11 +20,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/rules/internal/utils"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/rules/internal/utils"
 	"github.com/stoewer/go-strcase"
 	apb "google.golang.org/genproto/googleapis/api/annotations"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // AddRules accepts a register function and registers each of
@@ -52,19 +52,19 @@ func AddRules(r lint.RuleRegistry) error {
 	)
 }
 
-func isResourceMessage(m *desc.MessageDescriptor) bool {
+func isResourceMessage(m protoreflect.MessageDescriptor) bool {
 	// If the parent of this message is a message, it is nested and shoudn't
 	// be considered a resource, even if it has a name field.
-	_, nested := m.GetParent().(*desc.MessageDescriptor)
-	return m.FindFieldByName("name") != nil && !strings.HasSuffix(m.GetName(), "Request") &&
-		!strings.HasSuffix(m.GetName(), "Response") && !nested
+	_, nested := m.Parent().(protoreflect.MessageDescriptor)
+	return m.Fields().ByName("name") != nil && !strings.HasSuffix(string(m.Name()), "Request") &&
+		!strings.HasSuffix(string(m.Name()), "Response") && !nested
 }
 
-func hasResourceAnnotation(m *desc.MessageDescriptor) bool {
+func hasResourceAnnotation(m protoreflect.MessageDescriptor) bool {
 	return utils.GetResource(m) != nil
 }
 
-func hasResourceDefinitionAnnotation(f *desc.FileDescriptor) bool {
+func hasResourceDefinitionAnnotation(f protoreflect.FileDescriptor) bool {
 	return len(utils.GetResourceDefinitions(f)) > 0
 }
 
@@ -96,7 +96,7 @@ func isRootLevelResource(resource *apb.ResourceDescriptor) bool {
 // root-level resource by checking how many segments it has - root-level
 // resource patterns have only two segments, thus one delimeter.
 func isRootLevelResourcePattern(pattern string) bool {
-	return strings.Count(pattern, "/") <= 1
+	return strings.Count(strings.Trim(pattern, "/"), "/") <= 1
 }
 
 // getParentIDVariable is a helper that returns the parent resource ID segment
@@ -113,6 +113,13 @@ func getParentIDVariable(pattern string) string {
 	if utils.IsSingletonResourcePattern(pattern) {
 		// Last variable is the parent's for a singleton child.
 		return variables[len(variables)-1]
+	}
+
+	// If there are fewer than 2 variables for a non-singleton resource, there is no parent ID variable.
+	// This can happen with invalid patterns like "prefix/collection/{id}",
+	// which will be caught by the resource-name-components-alternate rule.
+	if len(variables) < 2 {
+		return ""
 	}
 
 	return variables[len(variables)-2]

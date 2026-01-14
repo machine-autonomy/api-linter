@@ -17,7 +17,7 @@ package aip0133
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestMethodSignature(t *testing.T) {
@@ -82,7 +82,7 @@ func TestMethodSignature(t *testing.T) {
 				  };
 				}
 			`, test)
-			m := f.GetServices()[0].GetMethods()[0]
+			m := f.Services().Get(0).Methods().Get(0)
 			if diff := test.problems.SetDescriptor(m).Diff(methodSignature.Lint(f)); diff != "" {
 				t.Error(diff)
 			}
@@ -115,6 +115,27 @@ func TestMethodSignature(t *testing.T) {
 			t.Error(diff)
 		}
 	})
+
+	// Ensure that this isn't producing a wonky finding if the "standard create"
+	// doesn't actually interact with a resource. Other rules would capture that
+	// errant aspect.
+	t.Run("SkipNonResource", func(t *testing.T) {
+		file := testutils.ParseProto3String(t, `
+			import "google/api/client.proto";
+			service Library {
+				rpc CreateBook(CreateBookRequest) returns (Book) {}
+			}
+			message CreateBookRequest {
+				Book book = 1;
+				string book_id = 2;
+			}
+			message Book {}
+		`)
+		if diff := (testutils.Problems{}).Diff(methodSignature.Lint(file)); diff != "" {
+			t.Error(diff)
+		}
+	})
+
 	// Add a separate test for the LRO case rather than introducing yet
 	// another knob on the above test.
 	t.Run("Longrunning", func(t *testing.T) {
@@ -177,7 +198,7 @@ func TestMethodSignature(t *testing.T) {
 			{
 				Message:    "not_book,book",
 				Suggestion: `option (google.api.method_signature) = "not_book,book_id";`,
-				Descriptor: file.GetServices()[0].GetMethods()[0],
+				Descriptor: file.Services().Get(0).Methods().Get(0),
 			},
 		}
 		if diff := want.Diff(methodSignature.Lint(file)); diff != "" {

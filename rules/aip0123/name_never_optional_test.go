@@ -17,7 +17,7 @@ package aip0123
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestNameNeverOptional(t *testing.T) {
@@ -46,10 +46,29 @@ func TestNameNeverOptional(t *testing.T) {
 					{{.Label}} string {{.FieldName}} = 1;
 				}
 			`, test)
-			field := f.GetMessageTypes()[0].GetFields()[0]
+			field := f.Messages().Get(0).Fields().Get(0)
 			if diff := test.problems.SetDescriptor(field).Diff(nameNeverOptional.Lint(f)); diff != "" {
 				t.Error(diff)
 			}
 		})
+	}
+}
+
+func TestNameNeverOptional_SkipProto2(t *testing.T) {
+	f := testutils.ParseProtoString(t, `
+		syntax = "proto2";
+
+		import "google/api/resource.proto";
+		message Book {
+			option (google.api.resource) = {
+				type: "library.googleapis.com/Book"
+				pattern: "publishers/{publisher}/books/{book}"
+			};
+
+			optional string name = 1;
+		}
+	`)
+	if got := nameNeverOptional.Lint(f); len(got) > 0 {
+		t.Errorf("expected proto2 file to be skipped, got findings %v", got)
 	}
 }

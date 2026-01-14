@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestPhpNamespace(t *testing.T) {
@@ -39,6 +39,15 @@ func TestPhpNamespace(t *testing.T) {
 		}}},
 		{"InvalidBeta", `Google\\Example\\V1Beta1`, testutils.Problems{{
 			Suggestion: fmt.Sprintf("option php_namespace = %s;", `Google\\Example\\V1beta1`),
+		}}},
+		{"InvalidBetaChannel", `Google\\Example\\V1Beta`, testutils.Problems{{
+			Suggestion: fmt.Sprintf("option php_namespace = %s;", `Google\\Example\\V1beta`),
+		}}},
+		{"InvalidTemplate", `Google\\Example\\V1Main`, testutils.Problems{{
+			Suggestion: fmt.Sprintf("option php_namespace = %s;", `Google\\Example\\V1main`),
+		}}},
+		{"InvalidPointRelease", `Google\\Example\\V1P1Beta1`, testutils.Problems{{
+			Suggestion: fmt.Sprintf("option php_namespace = %s;", `Google\\Example\\V1p1beta1`),
 		}}},
 		{"ValidServiceNamespaceCase", `Google\\Foobar\\V1`, testutils.Problems{{Message: "Case"}}},
 	} {

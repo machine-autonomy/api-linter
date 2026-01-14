@@ -4,39 +4,41 @@ on:
   pull_request:
     branches:
       - main
+      - v1 
+      - v2
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
       - run: go test -race ./...
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
       - name: staticcheck
         uses: dominikh/staticcheck-action@v1.3.1
         with:
-          version: "2023.1"
+          version: "2025.1.1"
           install-go: false
   quality-checker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
-      - name: Run the quality checker (which catches obvious mistakes, missing docs, etc.)
+      - name: run the quality checker (which catches obvious mistakes, missing docs, etc.)
         run: go run ./.github/quality-checker

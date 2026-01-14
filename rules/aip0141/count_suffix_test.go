@@ -17,8 +17,8 @@ package aip0141
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestCount(t *testing.T) {
@@ -26,7 +26,7 @@ func TestCount(t *testing.T) {
 		testName  string
 		FieldName string
 		want      string
-		err       bool
+		wantErr   bool
 	}{
 		{"Valid", "item_count", "item_count", false},
 		{"NumItems", "num_items", "item_count", true},
@@ -41,9 +41,9 @@ func TestCount(t *testing.T) {
 				int32 {{.FieldName}} = 1;
 			}
 		`, test)
-		field := file.GetMessageTypes()[0].GetFields()[0]
+		field := file.Messages().Get(0).Fields().Get(0)
 		wantProblems := testutils.Problems{}
-		if test.err {
+		if test.wantErr {
 			wantProblems = append(wantProblems, lint.Problem{
 				Message:    "_count suffix",
 				Suggestion: test.want,

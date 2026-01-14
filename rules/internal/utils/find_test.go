@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestFindMessage(t *testing.T) {
@@ -41,14 +41,20 @@ func TestFindMessage(t *testing.T) {
 		t.Errorf("Got nil, expected Book message.")
 	}
 	if scroll := FindMessage(files["c.proto"], "Scroll"); scroll != nil {
-		t.Errorf("Got Sctoll message, expected nil.")
+		t.Errorf("Got Scroll message, expected nil.")
+	}
+	if book := FindMessage(files["c.proto"], "test.Book"); book == nil {
+		t.Errorf("Got nil, expected Book message from qualified name.")
+	}
+	if scroll := FindMessage(files["c.proto"], "other.Scroll"); scroll == nil {
+		t.Errorf("Got nil message, expected Scroll message from qualified name.")
 	}
 }
 
 func TestFindFieldDotNotation(t *testing.T) {
 	file := testutils.ParseProto3String(t, `
 		package test;
-		
+
 		message CreateBookRequest {
 			string parent = 1;
 
@@ -66,7 +72,7 @@ func TestFindFieldDotNotation(t *testing.T) {
 			PublishingInfo publishing_info = 2;
 		}
 	`)
-	msg := file.GetMessageTypes()[0]
+	msg := file.Messages().Get(0)
 
 	for _, tst := range []struct {
 		name, path string
@@ -83,7 +89,7 @@ func TestFindFieldDotNotation(t *testing.T) {
 
 			if f == nil {
 				t.Errorf("Got nil, expected %q field", want)
-			} else if got := f.GetName(); got != want {
+			} else if got := f.Name(); string(got) != want {
 				t.Errorf("Got %q, expected %q", got, want)
 			}
 		})

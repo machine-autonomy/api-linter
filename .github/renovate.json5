@@ -1,6 +1,7 @@
 {
   extends: [
     "config:base",
+    ":disableDependencyDashboard",
     "group:all",
     "schedule:weekly",
     ":semanticCommitTypeAll(chore)"
@@ -12,14 +13,15 @@
       matchPackageNames: [
         "bitbucket.org/creachadair/stringset",
         "dominikh/staticcheck-action",
-        "github.com/jhump/protoreflect",
+        "github.com/olekukonko/tablewriter",
+        "ruby",
       ],
       enabled: false
     }
   ],
   force: {
     constraints: {
-      go: "1.22"
+      go: "1.24"
     }
   }
 }

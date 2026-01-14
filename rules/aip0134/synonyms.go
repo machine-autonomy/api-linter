@@ -17,31 +17,37 @@ package aip0134
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/locations"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/locations"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Update methods should use the word "update", not synonyms.
 var synonyms = &lint.MethodRule{
 	Name: lint.NewRuleName(134, "synonyms"),
-	OnlyIf: func(m *desc.MethodDescriptor) bool {
-		return m.GetName() != "SetIamPolicy"
+	OnlyIf: func(m protoreflect.MethodDescriptor) bool {
+		return m.Name() != "SetIamPolicy"
 	},
-	LintMethod: func(m *desc.MethodDescriptor) []lint.Problem {
-		name := m.GetName()
+	LintMethod: func(m protoreflect.MethodDescriptor) []lint.Problem {
+		name := string(m.Name())
 		for _, syn := range []string{"Patch", "Put", "Set"} {
 			if strings.HasPrefix(name, syn) {
-				return []lint.Problem{{
-					Message: fmt.Sprintf(
-						`%q can be a synonym for "Update". Should this be a Update method?`,
-						syn,
-					),
-					Descriptor: m,
-					Location:   locations.DescriptorName(m),
-					Suggestion: strings.Replace(name, syn, "Update", 1),
-				}}
+				synLen := len(syn)
+				nameLen := len(name)
+				// Check for word boundary: either exact match or next char is uppercase
+				if nameLen == synLen || unicode.IsUpper(rune(name[synLen])) {
+					return []lint.Problem{{
+						Message: fmt.Sprintf(
+							`%q can be a synonym for "Update". Should this be a Update method?`,
+							syn,
+						),
+						Descriptor: m,
+						Location:   locations.DescriptorName(m),
+						Suggestion: strings.Replace(name, syn, "Update", 1),
+					}}
+				}
 			}
 		}
 		return nil

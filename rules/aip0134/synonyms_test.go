@@ -17,7 +17,7 @@ package aip0134
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestSynonyms(t *testing.T) {
@@ -30,6 +30,9 @@ func TestSynonyms(t *testing.T) {
 		{"PutBook", testutils.Problems{{Suggestion: "UpdateBook"}}},
 		{"SetBook", testutils.Problems{{Suggestion: "UpdateBook"}}},
 		{"SetIamPolicy", nil},
+		{"Settle", testutils.Problems{}},
+		{"PatchyClouds", testutils.Problems{}},
+		{"PutterAround", testutils.Problems{}},
 	}
 	for _, test := range tests {
 		t.Run(test.MethodName, func(t *testing.T) {
@@ -40,7 +43,7 @@ func TestSynonyms(t *testing.T) {
 				message {{.MethodName}}Request {}
 				message Book {}
 			`, test)
-			m := file.GetServices()[0].GetMethods()[0]
+			m := file.Services().Get(0).Methods().Get(0)
 			if diff := test.problems.SetDescriptor(m).Diff(synonyms.Lint(file)); diff != "" {
 				t.Error(diff)
 			}

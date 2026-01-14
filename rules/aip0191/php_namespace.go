@@ -19,20 +19,20 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/locations"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/locations"
 	"github.com/stoewer/go-strcase"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	dpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 var phpNamespace = &lint.FileRule{
 	Name: lint.NewRuleName(191, "php-namespace"),
-	OnlyIf: func(f *desc.FileDescriptor) bool {
-		fops := f.GetFileOptions()
-		return fops != nil && fops.GetPhpNamespace() != ""
+	OnlyIf: func(f protoreflect.FileDescriptor) bool {
+		return f.Options().(*dpb.FileOptions).GetPhpNamespace() != ""
 	},
-	LintFile: func(f *desc.FileDescriptor) []lint.Problem {
-		ns := f.GetFileOptions().GetPhpNamespace()
+	LintFile: func(f protoreflect.FileDescriptor) []lint.Problem {
+		ns := f.Options().(*dpb.FileOptions).GetPhpNamespace()
 		delim := `\`
 
 		// Check for invalid characters.
@@ -47,7 +47,15 @@ var phpNamespace = &lint.FileRule{
 		// Check that upper camel case is used.
 		upperCamel := []string{}
 		for _, segment := range strings.Split(ns, delim) {
-			upperCamel = append(upperCamel, strcase.UpperCamelCase(segment))
+			if maybeVersionRegexp.MatchString(segment) {
+				// The version portion of the package for PHP should only have
+				// the first letter, the 'v', be uppercase. The rest are all
+				// lowercased.
+				upperCamel = append(upperCamel, strings.ToUpper(segment[:1])+strings.ToLower(segment[1:]))
+			} else {
+				// None versioned portions follow UpperCamel casing.
+				upperCamel = append(upperCamel, strcase.UpperCamelCase(segment))
+			}
 		}
 		if want := strings.Join(upperCamel, delim); ns != want {
 			return []lint.Problem{{
@@ -65,8 +73,9 @@ var phpNamespace = &lint.FileRule{
 			}}
 		}
 
-		for _, s := range f.GetServices() {
-			n := s.GetName()
+		for i := 0; i < f.Services().Len(); i++ {
+			s := f.Services().Get(i)
+			n := string(s.Name())
 			if !packagingServiceNameEquals(n, ns, delim) {
 				msg := fmt.Sprintf("Case of PHP namespace and service name %q must match.", n)
 				return []lint.Problem{{

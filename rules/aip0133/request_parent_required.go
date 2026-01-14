@@ -2,19 +2,18 @@ package aip0133
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/rules/internal/utils"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/rules/internal/utils"
 	"github.com/stoewer/go-strcase"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var requestParentRequired = &lint.MessageRule{
 	Name:   lint.NewRuleName(133, "request-parent-required"),
 	OnlyIf: utils.IsCreateRequestMessage,
-	LintMessage: func(m *desc.MessageDescriptor) []lint.Problem {
-		if m.FindFieldByName("parent") == nil {
+	LintMessage: func(m protoreflect.MessageDescriptor) []lint.Problem {
+		if m.Fields().ByName("parent") == nil {
 			// Sanity check: If the resource has a pattern, and that pattern
 			// contains only one variable, then a parent field is not expected.
 			//
@@ -22,30 +21,19 @@ var requestParentRequired = &lint.MessageRule{
 			// from the request, then get the resource annotation from that,
 			// and then inspect the pattern there (oy!).
 			singular := getResourceMsgNameFromReq(m)
-			if field := m.FindFieldByName(strcase.SnakeCase(singular)); field != nil {
-				if hasNoParent(field.GetMessageType()) {
+			if field := m.Fields().ByName(protoreflect.Name(strcase.SnakeCase(singular))); field != nil {
+				if !utils.HasParent(utils.GetResource(field.Message())) {
 					return nil
 				}
 			}
 
 			// Nope, this is not the unusual case, and a parent field is expected.
 			return []lint.Problem{{
-				Message:    fmt.Sprintf("Message %q has no `parent` field", m.GetName()),
+				Message:    fmt.Sprintf("Message %q has no `parent` field", m.Name()),
 				Descriptor: m,
 			}}
 		}
 
 		return nil
 	},
-}
-
-func hasNoParent(m *desc.MessageDescriptor) bool {
-	if resource := utils.GetResource(m); resource != nil {
-		for _, pattern := range resource.GetPattern() {
-			if strings.Count(pattern, "{") == 1 {
-				return true
-			}
-		}
-	}
-	return false
 }

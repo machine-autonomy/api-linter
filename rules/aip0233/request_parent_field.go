@@ -18,31 +18,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/googleapis/api-linter/lint"
-	"github.com/googleapis/api-linter/rules/internal/utils"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/googleapis/api-linter/v2/lint"
+	"github.com/googleapis/api-linter/v2/rules/internal/utils"
 	"github.com/stoewer/go-strcase"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // The Batch Create request message should have parent field.
 var requestParentField = &lint.MessageRule{
 	Name: lint.NewRuleName(233, "request-parent-field"),
-	OnlyIf: func(m *desc.MessageDescriptor) bool {
-		// Sanity check: If the resource has a pattern, and that pattern
-		// contains only one variable, then a parent field is not expected.
-		//
+	OnlyIf: func(m protoreflect.MessageDescriptor) bool {
 		// In order to parse out the pattern, we get the resource message
 		// from the response, then get the resource annotation from that,
 		// and then inspect the pattern there (oy!).
-		plural := strings.TrimPrefix(strings.TrimSuffix(m.GetName(), "Request"), "BatchCreate")
-		if resp := utils.FindMessage(m.GetFile(), fmt.Sprintf("BatchCreate%sResponse", plural)); resp != nil {
-			if paged := resp.FindFieldByName(strcase.SnakeCase(plural)); paged != nil {
-				if resource := utils.GetResource(paged.GetMessageType()); resource != nil {
-					for _, pattern := range resource.GetPattern() {
-						if strings.Count(pattern, "{") == 1 {
-							return false
-						}
-					}
+		plural := strings.TrimPrefix(strings.TrimSuffix(string(m.Name()), "Request"), "BatchCreate")
+		if resp := utils.FindMessage(m.ParentFile(), fmt.Sprintf("BatchCreate%sResponse", plural)); resp != nil {
+			if resField := resp.Fields().ByName(protoreflect.Name(strcase.SnakeCase(plural))); resField != nil {
+				if !utils.HasParent(utils.GetResource(resField.Message())) {
+					return false
 				}
 			}
 		}

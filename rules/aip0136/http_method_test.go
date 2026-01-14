@@ -17,7 +17,7 @@ package aip0136
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestHttpMethod(t *testing.T) {
@@ -36,6 +36,7 @@ func TestHttpMethod(t *testing.T) {
 		{"InvalidDelete", "ArchiveBook", "delete", "", testutils.Problems{{Message: "POST or GET"}}},
 		{"IrrelevantPatch", "UpdateBook", "patch", "", nil},
 		{"IrrelevantDelete", "DeleteBook", "delete", "", nil},
+		{"SkipExpunge", "ExpungeBook", "delete", "", nil},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
@@ -51,7 +52,7 @@ func TestHttpMethod(t *testing.T) {
 				message {{.MethodName}}Request {}
 				message {{.MethodName}}Response {}
 			`, test)
-			method := file.GetServices()[0].GetMethods()[0]
+			method := file.Services().Get(0).Methods().Get(0)
 			got := httpMethod.Lint(file)
 			if diff := test.problems.SetDescriptor(method).Diff(got); diff != "" {
 				t.Error(diff)

@@ -17,7 +17,7 @@ package utils
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 	apb "google.golang.org/genproto/googleapis/api/annotations"
 )
 
@@ -134,7 +134,7 @@ func TestIsResourceRevision(t *testing.T) {
 				string name = 1;
 			}
 		`, test)
-		m := f.FindMessage(test.Message)
+		m := f.Messages().Get(0)
 		if got := IsResourceRevision(m); got != test.want {
 			t.Errorf("IsResourceRevision(%+v): got %v, want %v", m, got, test.want)
 		}
@@ -177,6 +177,45 @@ func TestIsRevisionRelationship(t *testing.T) {
 			b := &apb.ResourceDescriptor{Type: test.typeB}
 			if got := IsRevisionRelationship(a, b); got != test.want {
 				t.Errorf("IsRevisionRelationship(%s, %s): got %v, want %v", test.typeA, test.typeB, got, test.want)
+			}
+		})
+	}
+}
+
+func TestHasParent(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		pattern string
+		want    bool
+	}{
+		{
+			name:    "child resource",
+			pattern: "foos/{foo}/bars/{bar}",
+			want:    true,
+		},
+		{
+			name:    "top level resource",
+			pattern: "foos/{foo}",
+			want:    false,
+		},
+		{
+			name:    "top level singleton",
+			pattern: "foo",
+			want:    false,
+		},
+		{
+			name:    "empty",
+			pattern: "",
+			want:    false,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var in *apb.ResourceDescriptor
+			if test.pattern != "" {
+				in = &apb.ResourceDescriptor{Pattern: []string{test.pattern}}
+			}
+			if got := HasParent(in); got != test.want {
+				t.Errorf("HasParent(%s): got %v, want %v", test.pattern, got, test.want)
 			}
 		})
 	}

@@ -17,7 +17,7 @@ package aip0136
 import (
 	"testing"
 
-	"github.com/googleapis/api-linter/rules/internal/testutils"
+	"github.com/googleapis/api-linter/v2/rules/internal/testutils"
 )
 
 func TestResponseMessageName(t *testing.T) {
@@ -47,12 +47,31 @@ func TestResponseMessageName(t *testing.T) {
 				message {{.MethodName}}Request {}
 				message {{.RespMessageName}} {}
 				`, test)
-				method := file.GetServices()[0].GetMethods()[0]
+				method := file.Services().Get(0).Methods().Get(0)
 				problems := responseMessageName.Lint(file)
 				if diff := test.problems.SetDescriptor(method).Diff(problems); diff != "" {
 					t.Error(diff)
 				}
 			})
+		}
+	})
+
+	t.Run("IAM Policy exception", func(t *testing.T) {
+		file := testutils.ParseProto3Tmpl(t, `
+			package test;
+			import "google/api/resource.proto";
+			import "google/iam/v1/policy.proto";
+
+			service Library {
+				rpc SetIamPolicy(SetIamPolicyRequest) returns (google.iam.v1.Policy);
+			}
+
+			message SetIamPolicyRequest {}
+			`, nil)
+		method := file.Services().Get(0).Methods().Get(0)
+		problems := responseMessageName.Lint(file)
+		if diff := (testutils.Problems{}).SetDescriptor(method).Diff(problems); diff != "" {
+			t.Error(diff)
 		}
 	})
 
@@ -87,7 +106,7 @@ func TestResponseMessageName(t *testing.T) {
 				message {{.MessageName}} {}
 				message OperationMetadata {}
 				`, test)
-				method := file.GetServices()[0].GetMethods()[0]
+				method := file.Services().Get(0).Methods().Get(0)
 				problems := responseMessageName.Lint(file)
 				if diff := test.problems.SetDescriptor(method).Diff(problems); diff != "" {
 					t.Error(diff)
@@ -102,13 +121,15 @@ func TestResponseMessageName(t *testing.T) {
 			testName        string
 			MethodName      string
 			RespMessageName string
+			ReqFieldName    string
 			LRO             bool
 			problems        testutils.Problems
 		}{
-			{"Valid", "ArchiveBook", "Book", false, testutils.Problems{}},
-			{"Valid LRO", "ArchiveBook", "Book", true, testutils.Problems{}},
-			{"Invalid", "ArchiveBook", "Author", false, testutils.Problems{{Message: "not \"Author\"."}}},
-			{"Invalid LRO", "ArchiveBook", "Author", true, testutils.Problems{{Message: "not \"Author\"."}}},
+			{"Valid", "ArchiveBook", "Book", "name", false, testutils.Problems{}},
+			{"ValidResourceField", "ArchiveBook", "Book", "book", false, testutils.Problems{}},
+			{"Valid LRO", "ArchiveBook", "Book", "name", true, testutils.Problems{}},
+			{"Invalid", "ArchiveBook", "Author", "name", false, testutils.Problems{{Message: "not \"Author\"."}}},
+			{"Invalid LRO", "ArchiveBook", "Author", "name", true, testutils.Problems{{Message: "not \"Author\"."}}},
 		}
 
 		for _, test := range tests {
@@ -123,7 +144,7 @@ func TestResponseMessageName(t *testing.T) {
 				service Library {
 					rpc {{.MethodName}}({{.MethodName}}Request) returns ({{ if .LRO }}google.longrunning.Operation{{ else }}{{.RespMessageName}}{{ end }}) {
 						option (google.api.http) = {
-							post: "/v1/{name=publishers/*/books/*}:foo"
+							post: "/v1/{ {{.ReqFieldName}}=publishers/*/books/*}:foo"
 							body: "*"
 						};
 						{{ if .LRO }}
@@ -139,6 +160,8 @@ func TestResponseMessageName(t *testing.T) {
 					option (google.api.resource) = {
 						type: "library.googleapis.com/Book"
 						pattern: "publishers/{publisher}/books/{book}"
+						singular: "book"
+						plural: "books"
 					};
 				}
 
@@ -152,10 +175,10 @@ func TestResponseMessageName(t *testing.T) {
 				message {{.MethodName}}Request {
 					// The book to operate on.
 					// Format: publishers/{publisher}/books/{book}
-					string name = 1 [(google.api.resource_reference).type = "library.googleapis.com/Book"];
+					string {{.ReqFieldName}} = 1 [(google.api.resource_reference).type = "library.googleapis.com/Book"];
 				}
 				`, test)
-				method := file.GetServices()[0].GetMethods()[0]
+				method := file.Services().Get(0).Methods().Get(0)
 				problems := responseMessageName.Lint(file)
 				if diff := test.problems.SetDescriptor(method).Diff(problems); diff != "" {
 					t.Error(diff)
@@ -192,7 +215,7 @@ func TestResponseMessageName(t *testing.T) {
 				message DummyRequest {}
 				message DummyResponse {}
 				`, test)
-				method := file.GetServices()[0].GetMethods()[0]
+				method := file.Services().Get(0).Methods().Get(0)
 				problems := responseMessageName.Lint(file)
 				if diff := test.problems.SetDescriptor(method).Diff(problems); diff != "" {
 					t.Error(diff)

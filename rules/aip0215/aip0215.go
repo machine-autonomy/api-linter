@@ -16,7 +16,7 @@
 package aip0215
 
 import (
-	"github.com/googleapis/api-linter/lint"
+	"github.com/googleapis/api-linter/v2/lint"
 )
 
 // AddRules adds all of the AIP-215 rules to the provided registry.
@@ -24,5 +24,6 @@ func AddRules(r lint.RuleRegistry) error {
 	return r.Register(
 		215,
 		versionedPackages,
+		foreignTypeReference,
 	)
 }
