@@ -12,6 +12,7 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/go-cmp v0.7.0
 	github.com/googleapis/api-linter v1.72.0
+	github.com/googleapis/api-linter/v2 v2.1.0
 	github.com/jhump/protoreflect v1.17.0
 	github.com/lithammer/dedent v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
