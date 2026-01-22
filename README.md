@@ -1,3 +1,9 @@
+# このリポジトリで加えた主な変更
+
+- `buf`のpluginを同梱
+
+# 以下はもとのREADME.mdから
+
 # Google API Linter
 
 [![ci](https://github.com/googleapis/api-linter/actions/workflows/ci.yaml/badge.svg)](https://github.com/googleapis/api-linter/actions/workflows/ci.yaml)
